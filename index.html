@@ -10,6 +10,7 @@
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
 
     <style>
         body {
@@ -57,83 +58,91 @@
 
     <main class="bg-white p-6 sm:p-8 rounded-2xl shadow-lg w-full max-w-3xl space-y-6">
         <!-- Header Section -->
-        <header class="text-center">
-            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">AI Dictation Exercise Generator</h1>
-            <p class="text-gray-600 mt-2">Create and complete AI-powered dictation exercises.</p>
+        <header class="text-center relative">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 px-20">AI Dictation Exercise Generator</h1>
+            <p id="header-subtitle" class="text-gray-600 mt-2">Create and complete AI-powered dictation exercises.</p>
+            <button id="logout-btn" class="hidden absolute top-0 right-0 bg-red-500 text-white py-2 px-4 rounded-lg text-sm font-semibold hover:bg-red-600 transition">Log Out</button>
         </header>
 
-        <!-- Tab Navigation -->
-        <div class="border-b border-gray-200">
-            <nav class="-mb-px flex space-x-4" aria-label="Tabs">
-                <button id="setup-tab-btn" class="tab-btn active whitespace-nowrap py-3 px-4 border-b-2 font-semibold text-lg text-gray-500 hover:text-blue-600 hover:border-blue-300">
-                    Setup
-                </button>
-                <button id="exercise-tab-btn" class="tab-btn whitespace-nowrap py-3 px-4 border-b-2 font-semibold text-lg text-gray-500 hover:text-blue-600 hover:border-blue-300" disabled>
-                    Exercise
-                </button>
-            </nav>
+        <!-- Login Section -->
+        <div id="login-section" class="hidden space-y-4 pt-4">
+            <h2 class="text-2xl font-bold text-center text-gray-800">Teacher Login</h2>
+            <div>
+                <label for="email" class="block text-lg font-semibold text-gray-700">Email</label>
+                <input type="email" id="email" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="teacher@example.com">
+            </div>
+            <div>
+                <label for="password" class="block text-lg font-semibold text-gray-700">Password</label>
+                <input type="password" id="password" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <p id="login-error" class="text-red-600 text-center"></p>
+            <button id="login-btn" class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition">Log In</button>
         </div>
 
-        <!-- Tab Content -->
-        <div id="tab-content">
-            <!-- Instructor Input Section (Setup Tab) -->
-            <div id="setup-tab-content" class="space-y-4">
-                <div>
-                    <label for="cefr-level" class="block text-lg font-semibold text-gray-700">CEFR Difficulty Level</label>
-                    <select id="cefr-level" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                        <option value="A1">A1 (Beginner)</option>
-                        <option value="A2">A2 (Elementary)</option>
-                        <option value="B1" selected>B1 (Intermediate)</option>
-                        <option value="B2">B2 (Upper-Intermediate)</option>
-                        <option value="C1">C1 (Advanced)</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="keywords" class="block text-lg font-semibold text-gray-700">Keywords & Phrases</label>
-                    <textarea id="keywords" rows="3" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g., renewable energy, solar panels, sustainability, carbon footprint"></textarea>
-                    <p class="text-sm text-gray-500">Separate words or phrases with a comma.</p>
-                </div>
-                <button id="generate-btn" class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition transform hover:scale-105 active:scale-100 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none">
-                    Generate Exercise
-                </button>
+        <!-- Main App Content (hidden until logged in or loading an exercise) -->
+        <div id="app-content" class="hidden">
+            <!-- Tab Navigation -->
+            <div id="tab-nav" class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-4" aria-label="Tabs">
+                    <button id="setup-tab-btn" class="tab-btn active whitespace-nowrap py-3 px-4 border-b-2 font-semibold text-lg text-gray-500 hover:text-blue-600 hover:border-blue-300">
+                        Setup
+                    </button>
+                    <button id="exercise-tab-btn" class="tab-btn whitespace-nowrap py-3 px-4 border-b-2 font-semibold text-lg text-gray-500 hover:text-blue-600 hover:border-blue-300" disabled>
+                        Exercise
+                    </button>
+                </nav>
             </div>
 
-            <!-- Student Exercise Section (Exercise Tab) -->
-            <div id="exercise-tab-content" class="hidden space-y-4 fade-in">
-                <!-- Audio Player -->
-                <div>
-                    <p class="text-lg font-semibold mb-2 text-gray-700">Listen to the passage:</p>
-                    <audio id="audio-player" controls class="w-full"></audio>
-                </div>
-
-                <!-- Dictation Passage with Blanks -->
-                <div>
-                    <p class="text-lg font-semibold mb-2 text-gray-700">Fill in the blanks:</p>
-                    <div id="passage-container" class="text-lg leading-relaxed bg-gray-100 p-4 rounded-lg space-y-2">
-                        <!-- The passage with input fields will be injected here -->
+            <!-- Tab Content -->
+            <div id="tab-content">
+                <!-- Instructor Input Section (Setup Tab) -->
+                <div id="setup-tab-content" class="space-y-4">
+                    <div>
+                        <label for="cefr-level" class="block text-lg font-semibold text-gray-700">CEFR Difficulty Level</label>
+                        <select id="cefr-level" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                            <option value="A1">A1 (Beginner)</option>
+                            <option value="A2">A2 (Elementary)</option>
+                            <option value="B1" selected>B1 (Intermediate)</option>
+                            <option value="B2">B2 (Upper-Intermediate)</option>
+                            <option value="C1">C1 (Advanced)</option>
+                        </select>
                     </div>
+                    <div>
+                        <label for="keywords" class="block text-lg font-semibold text-gray-700">Keywords & Phrases</label>
+                        <textarea id="keywords" rows="3" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g., renewable energy, solar panels, sustainability, carbon footprint"></textarea>
+                        <p class="text-sm text-gray-500">Separate words or phrases with a comma.</p>
+                    </div>
+                    <button id="generate-btn" class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition transform hover:scale-105 active:scale-100 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none">
+                        Generate Exercise
+                    </button>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="flex flex-col sm:flex-row gap-4 pt-4">
-                    <button id="check-answers-btn" class="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition transform hover:scale-105 active:scale-100">
-                        Check Answers
-                    </button>
-                     <button id="share-btn" class="w-full bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition transform hover:scale-105 active:scale-100">
-                        Share Exercise
-                    </button>
-                    <button id="start-over-btn" class="w-full bg-gray-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition">
-                        Start Over
-                    </button>
-                </div>
-                
-                 <!-- Results Display -->
-                <div id="results-container" class="hidden mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg fade-in">
-                    <p id="results-text" class="text-center font-medium text-blue-800"></p>
-                </div>
-                 <!-- Share Confirmation -->
-                <div id="share-confirmation" class="hidden mt-4 p-4 bg-green-50 border border-green-200 rounded-lg fade-in">
-                    <p class="text-center font-medium text-green-800">Shareable link copied to clipboard!</p>
+                <!-- Student Exercise Section (Exercise Tab) -->
+                <div id="exercise-tab-content" class="hidden space-y-4 fade-in">
+                    <!-- Audio Player -->
+                    <div>
+                        <p class="text-lg font-semibold mb-2 text-gray-700">Listen to the passage:</p>
+                        <audio id="audio-player" controls class="w-full"></audio>
+                    </div>
+                    <!-- Dictation Passage with Blanks -->
+                    <div>
+                        <p class="text-lg font-semibold mb-2 text-gray-700">Fill in the blanks:</p>
+                        <div id="passage-container" class="text-lg leading-relaxed bg-gray-100 p-4 rounded-lg space-y-2"></div>
+                    </div>
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row gap-4 pt-4">
+                        <button id="check-answers-btn" class="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-green-700 transition">Check Answers</button>
+                        <button id="share-btn" class="w-full bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-indigo-700 transition">Share Exercise</button>
+                        <button id="start-over-btn" class="w-full bg-gray-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-gray-700 transition">Start Over</button>
+                    </div>
+                    <!-- Results Display -->
+                     <div id="results-container" class="hidden mt-4 p-4 rounded-lg border">
+                        <p id="results-text" class="text-center font-medium"></p>
+                    </div>
+                    <!-- Share Confirmation -->
+                    <div id="share-confirmation" class="hidden mt-4 p-4 bg-green-50 border-green-200 rounded-lg">
+                        <p class="text-center font-medium text-green-800">Shareable link copied to clipboard!</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -141,12 +150,11 @@
         <!-- Loading Indicator -->
         <div id="loader-container" class="hidden flex-col items-center justify-center space-y-2 text-center py-10">
             <div class="loader"></div>
-            <p class="text-gray-600 font-medium">Generating your dictation exercise...</p>
-            <p class="text-sm text-gray-500">This may take a moment.</p>
+            <p class="text-gray-600 font-medium">Loading...</p>
         </div>
         
         <!-- Error Message Box -->
-        <div id="error-box" class="hidden p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg fade-in">
+        <div id="error-box" class="hidden p-4 bg-red-100 border-red-400 text-red-700 rounded-lg">
             <p id="error-message"></p>
         </div>
 
@@ -154,6 +162,13 @@
 
     <script type="module">
         // --- DOM Element References ---
+        const loginSection = document.getElementById('login-section');
+        const appContent = document.getElementById('app-content');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const loginError = document.getElementById('login-error');
         const generateBtn = document.getElementById('generate-btn');
         const keywordsInput = document.getElementById('keywords');
         const cefrLevelSelect = document.getElementById('cefr-level');
@@ -168,19 +183,14 @@
         const resultsContainer = document.getElementById('results-container');
         const resultsText = document.getElementById('results-text');
         const shareConfirmation = document.getElementById('share-confirmation');
-        
-        // Tab elements
         const setupTabBtn = document.getElementById('setup-tab-btn');
         const exerciseTabBtn = document.getElementById('exercise-tab-btn');
         const setupTabContent = document.getElementById('setup-tab-content');
         const exerciseTabContent = document.getElementById('exercise-tab-content');
         const tabContentContainer = document.getElementById('tab-content');
+        const tabNav = document.getElementById('tab-nav');
 
-        let currentExercise = {
-            passage: '',
-            keywords: [],
-            cefrLevel: ''
-        };
+        let currentExercise = {};
 
         // --- Firebase Configuration ---
         const firebaseConfig = {
@@ -196,11 +206,69 @@
         // Initialize Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        const auth = firebase.auth();
 
         // --- API Configuration ---
-        const API_KEY = "AIzaSyDBOfcLxvUEebTLW0UmILq56lOc8G1Q7xA"; // This will be automatically handled by the environment.
+        const API_KEY = "AIzaSyDBOfcLxvUEebTLW0UmILq56lOc8G1Q7xA"; // Kept for local testing if needed, but generation is now restricted.
         const TEXT_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
         const TTS_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${API_KEY}`;
+        
+        // --- Core App Logic ---
+
+        auth.onAuthStateChanged(async user => {
+            const params = new URLSearchParams(window.location.search);
+            const exerciseId = params.get('exercise');
+
+            if (user) { // User is logged in
+                loginSection.classList.add('hidden');
+                appContent.classList.remove('hidden');
+                logoutBtn.classList.remove('hidden');
+                tabNav.classList.remove('hidden');
+                setupTabBtn.classList.remove('hidden');
+                shareBtn.classList.remove('hidden');
+                
+                if (!exerciseId) {
+                    switchTab('setup');
+                } else {
+                    await loadFromUrl();
+                }
+
+            } else { // User is logged out
+                logoutBtn.classList.add('hidden');
+                if (exerciseId) {
+                    appContent.classList.remove('hidden');
+                    loginSection.classList.add('hidden');
+                    tabNav.classList.remove('hidden');
+                    setupTabBtn.classList.add('hidden'); // Hide setup for non-logged-in users
+                    shareBtn.classList.add('hidden'); // Hide share for non-logged-in users
+                    await loadFromUrl();
+                } else {
+                    appContent.classList.add('hidden');
+                    loginSection.classList.remove('hidden');
+                }
+            }
+        });
+
+        async function handleLogin() {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            loginError.textContent = '';
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+            } catch (error) {
+                console.error("Login failed:", error);
+                if (error.code === 'auth/invalid-login-credentials' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+                    loginError.textContent = 'Incorrect email or password. Please try again.';
+                } else {
+                    loginError.textContent = 'An unexpected error occurred. Please try again later.';
+                }
+            }
+        }
+
+        async function handleLogout() {
+            await auth.signOut();
+            handleStartOver(); // Reset the UI to a clean state
+        }
         
         async function fetchWithBackoff(url, payload, maxRetries = 3) {
             let attempt = 0;
@@ -211,34 +279,47 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload),
                     });
-
-                    if (!response.ok) {
-                        const errorBody = await response.json();
-                        throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorBody.error?.message || 'Unknown error'}`);
-                    }
+                    if (!response.ok) throw new Error(`API Error: ${response.status}`);
                     return await response.json();
                 } catch (error) {
                     attempt++;
                     if (attempt >= maxRetries) throw error;
-                    const delay = Math.pow(2, attempt) * 1000;
-                    console.warn(`API call failed. Retrying in ${delay}ms...`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
                 }
             }
         }
 
         async function generatePassage(keywords, level) {
-            const systemPrompt = `You are an English teacher... Generate a short, clear paragraph for an English learner at the ${level} CEFR level... The passage must incorporate: "${keywords.join('", "')}". Do not use markdown.`;
-            const userQuery = `Generate a single paragraph at CEFR level ${level} that includes: "${keywords.join('", "')}".`;
+            const userQuery = `Generate a single, complete paragraph at CEFR level ${level}. You MUST use the following keywords and phrases exactly as they are written: "${keywords.join('", "')}". Do not change their form.`;
+            const systemPrompt = `You are an English teacher. Generate a short, clear, and complete paragraph for an English learner at the specified CEFR level. The passage MUST incorporate the provided keywords exactly as they are written, without changing their form (e.g., if given "run", use "run" not "running" or "ran"). Do not use any markdown formatting. Ensure the paragraph ends with a complete sentence and proper punctuation.`;
             const payload = {
                 contents: [{ parts: [{ text: userQuery }] }],
                 systemInstruction: { parts: [{ text: systemPrompt }] },
-                generationConfig: { temperature: 0.7, maxOutputTokens: 500 },
+                generationConfig: { temperature: 0.7, maxOutputTokens: 800 }, // Increased token limit
                 safetySettings: [{ category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }, { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }]
             };
             const result = await fetchWithBackoff(TEXT_API_URL, payload);
-            const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (!text) throw new Error("Failed to generate a valid passage.");
+            
+            const candidate = result.candidates?.[0];
+
+            if (!candidate) {
+                const promptFeedback = result.promptFeedback;
+                if (promptFeedback?.blockReason) {
+                    throw new Error(`Failed to generate passage. The prompt was blocked for reason: ${promptFeedback.blockReason}.`);
+                }
+                throw new Error("Failed to generate a valid passage. The response did not contain any text candidates.");
+            }
+
+            const finishReason = candidate.finishReason;
+            const text = candidate.content?.parts?.[0]?.text;
+
+            if (!text) {
+                if (finishReason && finishReason !== 'STOP') {
+                    throw new Error(`Failed to generate a valid passage. Generation stopped for reason: ${finishReason}.`);
+                }
+                throw new Error("Failed to generate a valid passage. The candidate response was empty.");
+            }
+
             return text.trim();
         }
 
@@ -255,7 +336,6 @@
             return audioData;
         }
         
-        // --- Firestore Functions ---
         async function saveExercise(exerciseData) {
             const docRef = await db.collection("exercises").add(exerciseData);
             return docRef.id;
@@ -263,20 +343,13 @@
 
         async function loadExercise(id) {
             const doc = await db.collection("exercises").doc(id).get();
-            if (doc.exists) {
-                return doc.data();
-            } else {
-                throw new Error("Exercise not found.");
-            }
+            if (doc.exists) return doc.data();
+            throw new Error("Exercise not found.");
         }
 
         function base64ToArrayBuffer(base64) {
-            const binaryString = window.atob(base64);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
+            const binaryString = window.atob(base64), len = binaryString.length, bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
             return bytes.buffer;
         }
         
@@ -295,9 +368,10 @@
         function createDictationUI(passage, keywords) {
             const sortedKeywords = [...keywords].sort((a, b) => b.length - a.length);
             let passageHTML = passage;
-            const regex = new RegExp(`(${sortedKeywords.map(kw => kw.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|')})`, 'gi');
+            const regex = new RegExp(`\\b(${sortedKeywords.map(kw => kw.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|')})\\b`, 'gi');
             passageHTML = passageHTML.replace(regex, (match) => {
                 const originalKw = keywords.find(kw => kw.toLowerCase() === match.toLowerCase());
+                if (!originalKw) return match;
                 const inputWidth = Math.max(originalKw.length * 10, 80);
                 return `<input type="text" data-answer="${originalKw}" class="dictation-blank border-b-2 border-gray-400 focus:border-blue-500 outline-none bg-transparent text-center transition mx-1" style="width: ${inputWidth}px;">`;
             });
@@ -312,30 +386,30 @@
             exerciseTabContent.classList.toggle('hidden', isSetup);
         }
         
-        function setLoadingState(isLoading) {
+        function setLoadingState(isLoading, message = "Loading...") {
             tabContentContainer.classList.toggle('hidden', isLoading);
+            if(isLoading) {
+                 appContent.classList.add('hidden');
+                 loginSection.classList.add('hidden');
+            } else {
+                 appContent.classList.remove('hidden');
+            }
+            loaderContainer.querySelector('p').textContent = message;
             loaderContainer.classList.toggle('hidden', !isLoading);
             errorBox.classList.add('hidden');
-            generateBtn.disabled = isLoading;
+            if (generateBtn) generateBtn.disabled = isLoading;
         }
         
         async function handleGenerateClick() {
             const keywordsText = keywordsInput.value.trim();
-            if (!keywordsText) {
-                showError("Please enter keywords.");
-                return;
-            }
+            if (!keywordsText) { showError("Please enter keywords."); return; }
             const keywords = keywordsText.split(',').map(kw => kw.trim()).filter(Boolean);
-            if (keywords.length === 0) {
-                showError("Please enter valid keywords.");
-                return;
-            }
+            if (keywords.length === 0) { showError("Please enter valid keywords."); return; }
             const selectedLevel = cefrLevelSelect.value;
-            setLoadingState(true);
+            setLoadingState(true, "Generating your dictation exercise...");
             try {
                 const passage = await generatePassage(keywords, selectedLevel);
-                const cleanedPassage = passage.replace(/\*/g, '');
-                await setupExercise(cleanedPassage, keywords, selectedLevel);
+                await setupExercise(passage, keywords, selectedLevel);
             } catch (error) {
                 console.error("Error during generation:", error);
                 showError(error.message || "An unknown error occurred.");
@@ -350,8 +424,7 @@
             const pcmBuffer = base64ToArrayBuffer(audioData);
             const pcm16 = new Int16Array(pcmBuffer);
             const wavBlob = pcmToWav(pcm16, 24000);
-            const audioUrl = URL.createObjectURL(wavBlob);
-            audioPlayer.src = audioUrl;
+            audioPlayer.src = URL.createObjectURL(wavBlob);
             setLoadingState(false);
             exerciseTabBtn.disabled = false;
             switchTab('exercise');
@@ -359,44 +432,74 @@
 
         function handleCheckAnswers() {
             const inputs = passageContainer.querySelectorAll('.dictation-blank');
+            const totalInputs = inputs.length;
+            if (totalInputs === 0) return;
+
             let correctCount = 0;
             inputs.forEach(input => {
                 if (input.value.trim().toLowerCase() === input.dataset.answer.toLowerCase()) {
-                    input.classList.remove('incorrect'); input.classList.add('correct'); correctCount++;
+                    input.classList.add('correct');
+                    input.classList.remove('incorrect');
+                    correctCount++;
                 } else {
-                    input.classList.remove('correct'); input.classList.add('incorrect');
+                    input.classList.add('incorrect');
+                    input.classList.remove('correct');
                 }
             });
-            resultsText.textContent = `You got ${correctCount} out of ${inputs.length} correct!`;
+
+            const score = correctCount / totalInputs;
+            let message = '';
+            
+            resultsContainer.className = 'mt-4 p-4 rounded-lg border';
+            resultsText.className = 'text-center font-medium';
+
+            if (score === 1) {
+                message = `🎉 Excellent! You got all ${totalInputs} correct! 🎉`;
+                resultsContainer.classList.add('bg-green-100', 'border-green-200');
+                resultsText.classList.add('text-green-800');
+            } else if (score >= 0.7) {
+                message = `👍 Great job! You got ${correctCount} out of ${totalInputs} correct.`;
+                 resultsContainer.classList.add('bg-blue-100', 'border-blue-200');
+                 resultsText.classList.add('text-blue-800');
+            } else if (score > 0) {
+                message = `😊 Good effort! You got ${correctCount} out of ${totalInputs}. Keep practicing!`;
+                 resultsContainer.classList.add('bg-yellow-100', 'border-yellow-200');
+                 resultsText.classList.add('text-yellow-800');
+            } else {
+                message = `💪 Don't give up! Try listening to the passage again.`;
+                 resultsContainer.classList.add('bg-gray-100', 'border-gray-200');
+                 resultsText.classList.add('text-gray-800');
+            }
+
+            resultsText.textContent = message;
             resultsContainer.classList.remove('hidden');
         }
         
         async function handleShareClick() {
             try {
                 const exerciseId = await saveExercise(currentExercise);
-                const baseUrl = window.location.href.split('?')[0]; // Get URL without existing query params
-                const shareUrl = `${baseUrl}?exercise=${exerciseId}`;
-                
-                // Fallback for copying to clipboard
+                const shareUrl = `${window.location.href.split('?')[0]}?exercise=${exerciseId}`;
                 const textArea = document.createElement("textarea");
                 textArea.value = shareUrl;
-                textArea.style.position = "fixed";
-                textArea.style.left = "-9999px";
                 document.body.appendChild(textArea);
                 textArea.select();
                 document.execCommand("copy");
                 document.body.removeChild(textArea);
-
                 shareConfirmation.classList.remove('hidden');
                 setTimeout(() => shareConfirmation.classList.add('hidden'), 3000);
             } catch (error) {
                 console.error("Error sharing exercise:", error);
-                showError("Could not save or copy the exercise link. Please try again.");
+                showError("Could not save or copy the exercise link.");
             }
         }
 
         function handleStartOver() {
-            switchTab('setup');
+            if (auth.currentUser) {
+                switchTab('setup');
+            } else {
+                appContent.classList.add('hidden');
+                loginSection.classList.remove('hidden');
+            }
             keywordsInput.value = '';
             passageContainer.innerHTML = '';
             audioPlayer.src = '';
@@ -406,33 +509,64 @@
             resultsContainer.classList.add('hidden');
             shareConfirmation.classList.add('hidden');
             cefrLevelSelect.value = 'B1';
-            window.history.pushState({}, '', window.location.pathname);
+            try {
+                window.history.pushState({}, '', window.location.pathname);
+            } catch (e) {
+                console.warn("Could not clear URL history:", e);
+            }
         }
         
         function showError(message) {
             errorMessage.textContent = message;
             errorBox.classList.remove('hidden');
-            tabContentContainer.classList.add('hidden');
+            appContent.classList.add('hidden');
+            loginSection.classList.add('hidden');
+            loaderContainer.classList.add('hidden');
         }
 
         async function loadFromUrl() {
             const params = new URLSearchParams(window.location.search);
             const exerciseId = params.get('exercise');
             if (exerciseId) {
-                setLoadingState(true);
+                setLoadingState(true, "Loading exercise...");
                 try {
                     const exerciseData = await loadExercise(exerciseId);
                     await setupExercise(exerciseData.passage, exerciseData.keywords, exerciseData.cefrLevel);
                 } catch (error) {
                     console.error("Error loading from URL:", error);
-                    showError("Could not load the shared exercise. It may have been deleted.");
+                    showError("Could not load the shared exercise.");
                     setLoadingState(false);
                 }
             }
         }
 
         // --- Attach Event Listeners ---
-        window.addEventListener('load', loadFromUrl);
+        window.addEventListener('load', () => {
+             auth.onAuthStateChanged(user => {
+                const params = new URLSearchParams(window.location.search);
+                const exerciseId = params.get('exercise');
+
+                if (user) {
+                    loginSection.classList.add('hidden');
+                    appContent.classList.remove('hidden');
+                    if (exerciseId) {
+                       loadFromUrl();
+                    }
+                } else {
+                    if (exerciseId) {
+                        appContent.classList.remove('hidden');
+                        loginSection.classList.add('hidden');
+                        loadFromUrl();
+                    } else {
+                        loginSection.classList.remove('hidden');
+                        appContent.classList.add('hidden');
+                    }
+                }
+            });
+        });
+
+        loginBtn.addEventListener('click', handleLogin);
+        logoutBtn.addEventListener('click', handleLogout);
         generateBtn.addEventListener('click', handleGenerateClick);
         checkAnswersBtn.addEventListener('click', handleCheckAnswers);
         shareBtn.addEventListener('click', handleShareClick);
@@ -442,3 +576,4 @@
     </script>
 </body>
 </html>
+
